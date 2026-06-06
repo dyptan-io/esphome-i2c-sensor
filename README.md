@@ -1,6 +1,6 @@
 # I2C Soil Moisture Sensor Integration for ESPHome
 
-This is the [ESPHome](https://github.com/esphome/esphome) external component for integration with the [I2C Moisture Sensor](https://github.com/Miceuz/i2c-moisture-sensor). The sensor measures soil moisture, temperature, and light intensity.
+This is the [ESPHome](https://github.com/esphome/esphome) external component for integration with the [I2C Moisture Sensor](https://github.com/Miceuz/i2c-moisture-sensor) (chirp). The sensor measures soil moisture, temperature, and light intensity.
 
 ## Example
 
@@ -8,7 +8,7 @@ This is the [ESPHome](https://github.com/esphome/esphome) external component for
 external_components:
   - source:
       type: git
-      url: https://github.com/diptanw/esphome-i2c-sensor
+      url: https://github.com/dyptan-io/esphome-i2c-sensor
       ref: main
     components: [ chirp ]
 

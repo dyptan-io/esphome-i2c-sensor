@@ -45,6 +45,6 @@ jobs:
             esphome-${{ matrix.target }}-
 
       - name: Build firmware
-        uses: esphome/build-action@v7.3.0
+        uses: esphome/build-action@v7
         with:
           yaml-file: tests/${{ matrix.target }}.yaml
