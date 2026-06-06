@@ -69,7 +69,7 @@ void I2CSoilMoistureComponent::setup() {
   }
 
   if (!write_reset_()) {
-    status_set_error("Failed to reset.");
+    status_set_error(LOG_STR("Failed to reset."));
     mark_failed();
     return;
   }
@@ -78,7 +78,7 @@ void I2CSoilMoistureComponent::setup() {
     uint8_t version = read_version_();
 
     if (version == 0) {
-      status_set_error("Failed to read version.");
+      status_set_error(LOG_STR("Failed to read version."));
       mark_failed();
       return;
     }
@@ -104,7 +104,7 @@ bool I2CSoilMoistureComponent::write_address(uint8_t new_addr) {
   device_.new_addr = new_addr;
 
   if (device_.addr == 0) {
-    status_set_error("Failed to read address.");
+    status_set_error(LOG_STR("Failed to read address."));
     return false;
   }
 
@@ -121,19 +121,19 @@ bool I2CSoilMoistureComponent::write_address(uint8_t new_addr) {
   }
 
   if (write_register(SET_ADDRESS, &new_addr, 1) != i2c::ERROR_OK) {
-    status_set_error("Failed to write address.");
+    status_set_error(LOG_STR("Failed to write address."));
     return false;
   }
 
   // The second request is required since FW 0x26 to protect agains spurious address changes.
   if (write_register(SET_ADDRESS, &new_addr, 1) != i2c::ERROR_OK) {
-    status_set_error("Failed to write address.");
+    status_set_error(LOG_STR("Failed to write address."));
     return false;
   }
 
   device_.addr = new_addr;
   set_i2c_address(new_addr);
-  status_set_error("I2C address was changed. Restart is required.");
+  status_set_error(LOG_STR("I2C address was changed. Restart is required."));
 
   return true;
 }
@@ -195,7 +195,7 @@ bool I2CSoilMoistureComponent::read_light_() {
   uint8_t buffer[2];
 
   if (read_register(GET_LIGHT, buffer, 2) != i2c::ERROR_OK) {
-    status_set_error("GET_LIGHT: Read failed");
+    status_set_error(LOG_STR("GET_LIGHT: Read failed"));
     return false;
   }
 
@@ -254,7 +254,7 @@ uint8_t I2CSoilMoistureComponent::read_address_() {
 
 bool I2CSoilMoistureComponent::write_reset_() {
   if (write_register(device_.addr, &RESET, 1) != i2c::ERROR_OK) {
-    status_set_error("Failed to reset.");
+    status_set_error(LOG_STR("Failed to reset."));
     return false;
   }
 
