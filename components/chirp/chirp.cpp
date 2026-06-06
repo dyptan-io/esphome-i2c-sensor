@@ -56,18 +56,24 @@ void I2CSoilMoistureComponent::update() {
       return;
     }
 
-    if (write_register(device_.addr, &MEASURE_LIGHT, 1) != i2c::ERROR_OK) {
+    if (write(&MEASURE_LIGHT, 1) != i2c::ERROR_OK) {
       status_set_warning("Failed to start light measurememnts.");
     }
 
+    // SLEEP must wait until after the light read — putting the sensor to sleep
+    // while a light measurement is in flight aborts it and GET_LIGHT returns 0xFFFF.
     set_timeout("read_light_", 3000 - 100, [this]() {
       if (!read_light_()) {
         status_set_warning("Failed to read light.");
       }
+      if (write(&SLEEP, 1) != i2c::ERROR_OK) {
+        status_set_warning("Failed to sleep.");
+      }
     });
+    return;
   }
 
-  if (write_register(device_.addr, &SLEEP, 1) != i2c::ERROR_OK) {
+  if (write(&SLEEP, 1) != i2c::ERROR_OK) {
     status_set_warning("Failed to sleep.");
   }
 }
@@ -233,7 +239,7 @@ bool I2CSoilMoistureComponent::read_light_() {
 
   ESP_LOGD(TAG, "GET_LIGHT: %d (0x%02X%02X)", raw, buffer[0], buffer[1]);
 
-  if (raw == -1) {
+  if (raw == 0xFFFF) {
     return false;
   }
 
@@ -283,7 +289,7 @@ uint8_t I2CSoilMoistureComponent::read_address_() {
 }
 
 bool I2CSoilMoistureComponent::write_reset_() {
-  if (write_register(device_.addr, &RESET, 1) != i2c::ERROR_OK) {
+  if (write(&RESET, 1) != i2c::ERROR_OK) {
     return false;
   }
 
