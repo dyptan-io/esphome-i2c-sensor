@@ -1,0 +1,34 @@
+esphome:
+  name: chirp-test-esp8266
+
+esp8266:
+  board: d1_mini
+
+logger:
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [chirp]
+
+i2c:
+  sda: D1
+  scl: D2
+
+sensor:
+  - platform: chirp
+    address: 0x20
+    update_interval: 5s
+    moisture:
+      name: "Soil Moisture"
+      calibration:
+        min_capacity: 300
+        max_capacity: 600
+    temperature:
+      name: "Soil Temperature"
+    illuminance:
+      name: "Ambient Light"
+      calibration:
+        coefficient: -1.525
+        constant: 100000

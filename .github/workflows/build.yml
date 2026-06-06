@@ -1,0 +1,50 @@
+name: Build firmware
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - '**/*.obj'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - '**/*.obj'
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - esp8266
+          - esp32
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache toolchains
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: platformio-${{ matrix.target }}-${{ hashFiles(format('tests/{0}.yaml', matrix.target)) }}
+          restore-keys: |
+            platformio-${{ matrix.target }}-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v5
+        with:
+          path: tests/.esphome
+          key: esphome-${{ matrix.target }}-${{ hashFiles(format('tests/{0}.yaml', matrix.target), 'components/**') }}
+          restore-keys: |
+            esphome-${{ matrix.target }}-
+
+      - name: Build firmware
+        uses: esphome/build-action@v7.3.0
+        with:
+          yaml-file: tests/${{ matrix.target }}.yaml
