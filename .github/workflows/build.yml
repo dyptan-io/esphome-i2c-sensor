@@ -3,8 +3,16 @@ name: Build firmware
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - '**/*.obj'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - '**/*.obj'
 
 jobs:
   build:
@@ -31,7 +39,7 @@ jobs:
       - name: Cache build artifacts
         uses: actions/cache@v5
         with:
-          path: .esphome
+          path: tests/.esphome
           key: esphome-${{ matrix.target }}-${{ hashFiles(format('tests/{0}.yaml', matrix.target), 'components/**') }}
           restore-keys: |
             esphome-${{ matrix.target }}-

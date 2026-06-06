@@ -132,7 +132,7 @@ Thanks to Miceuz for the Chirp sensor and to ESPHome for the integration platfor
 
 ## Print Model
 
-Additionally, there are models for 3D printing the casing for the sensor, which consists of two parts: top and bottom.
+Additionally, there are [models](assets/) for 3D printing the casing for the sensor, which consists of two parts: top and bottom.
 Note that the light reading will not be possible if you print it using non-translucent material.
 
-![alt text](i2c-sensor-bottom.png) ![alt text](i2c-sensor-top.png)
+![alt text](assets/i2c-sensor-bottom.png) ![alt text](assets/i2c-sensor-top.png)
