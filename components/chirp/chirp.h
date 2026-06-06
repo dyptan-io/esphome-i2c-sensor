@@ -43,6 +43,7 @@ class I2CSoilMoistureComponent : public PollingComponent, public i2c::I2CDevice,
 
   struct Device {
     bool started = false;
+    bool failure_logged = false;
     uint8_t addr = 0;
     uint8_t new_addr = 0;
   };
@@ -65,6 +66,8 @@ class I2CSoilMoistureComponent : public PollingComponent, public i2c::I2CDevice,
   bool read_busy_();
   // Internal method to reset the sensor.
   bool write_reset_();
+  // Internal method to transition the sensor into a failed state and log it once.
+  void mark_failed_();
 
   sensor::Sensor *moisture_{nullptr};
   sensor::Sensor *temperature_{nullptr};

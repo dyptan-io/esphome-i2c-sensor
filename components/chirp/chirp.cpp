@@ -21,21 +21,33 @@ static uint8_t RESET = 0x06;
 static uint8_t SLEEP = 0x08;
 
 void I2CSoilMoistureComponent::update() {
-  if (device_.started == false) {
-    ESP_LOGD(TAG, "Not started yet.");
+  if (!device_.started) {
+    setup();
     return;
   }
 
+  int reads = 0;
+  int failures = 0;
+
   if (moisture_ != nullptr) {
+    reads++;
     if (!read_moisture_()) {
+      failures++;
       status_set_warning("Failed to read moisture.");
     }
   }
 
   if (temperature_ != nullptr) {
+    reads++;
     if (!read_temperature_()) {
+      failures++;
       status_set_warning("Failed to read temperature.");
     }
+  }
+
+  if (reads > 0 && failures == reads) {
+    mark_failed_();
+    return;
   }
 
   if (light_ != nullptr) {
@@ -61,16 +73,17 @@ void I2CSoilMoistureComponent::update() {
 }
 
 void I2CSoilMoistureComponent::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up sensor...");
+  if (!device_.failure_logged) {
+    ESP_LOGD(TAG, "Initializing sensor...");
+  }
 
   if (!write_address(device_.new_addr)) {
-    mark_failed();
+    mark_failed_();
     return;
   }
 
   if (!write_reset_()) {
-    status_set_error(LOG_STR("Failed to reset."));
-    mark_failed();
+    mark_failed_();
     return;
   }
 
@@ -78,16 +91,34 @@ void I2CSoilMoistureComponent::setup() {
     uint8_t version = read_version_();
 
     if (version == 0) {
-      status_set_error(LOG_STR("Failed to read version."));
-      mark_failed();
+      mark_failed_();
       return;
     }
 
-    ESP_LOGCONFIG(TAG, "Sensor started.");
+    if (device_.failure_logged) {
+      ESP_LOGCONFIG(TAG, "Sensor recovered.");
+    } else {
+      ESP_LOGCONFIG(TAG, "Sensor started.");
+    }
     ESP_LOGCONFIG(TAG, "Firmware Version: 0x%02X", version);
 
     device_.started = true;
+    device_.failure_logged = false;
+    status_clear_error();
+    status_clear_warning();
   });
+}
+
+void I2CSoilMoistureComponent::mark_failed_() {
+  device_.started = false;
+
+  if (device_.failure_logged) {
+    return;
+  }
+
+  ESP_LOGCONFIG(TAG, "Failed to initialize sensor, will keep retrying.");
+  status_set_error(LOG_STR("Sensor not responding."));
+  device_.failure_logged = true;
 }
 
 void I2CSoilMoistureComponent::dump_config() {
@@ -104,7 +135,6 @@ bool I2CSoilMoistureComponent::write_address(uint8_t new_addr) {
   device_.new_addr = new_addr;
 
   if (device_.addr == 0) {
-    status_set_error(LOG_STR("Failed to read address."));
     return false;
   }
 
@@ -254,7 +284,6 @@ uint8_t I2CSoilMoistureComponent::read_address_() {
 
 bool I2CSoilMoistureComponent::write_reset_() {
   if (write_register(device_.addr, &RESET, 1) != i2c::ERROR_OK) {
-    status_set_error(LOG_STR("Failed to reset."));
     return false;
   }
 
