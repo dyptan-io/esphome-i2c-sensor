@@ -1,80 +1,67 @@
 #pragma once
 
-#include "esphome/core/component.h"
-#include "esphome/components/sensor/sensor.h"
 #include "esphome/components/i2c/i2c.h"
+#include "esphome/components/sensor/sensor.h"
+#include "esphome/core/component.h"
 
 namespace esphome {
 namespace chirp {
 
-class I2CSoilMoistureComponent : public PollingComponent, public i2c::I2CDevice, public sensor::Sensor {
+class I2CSoilMoistureComponent : public PollingComponent, public i2c::I2CDevice {
  public:
-  void set_moisture(sensor::Sensor *moisture) { moisture_ = moisture; }
-  void set_temperature(sensor::Sensor *temperature) { temperature_ = temperature; }
-  void set_light(sensor::Sensor *light) { light_ = light; }
-  void set_address(uint8_t addr) { device_.new_addr = addr; }
-  void calib_capacity(uint16_t cMin, uint16_t cMax, bool raw = false) {
-    calibration_.c_Min = cMin;
-    calibration_.c_Max = cMax;
-    calibration_.c_raw = raw;
+  void set_moisture_sensor(sensor::Sensor *sensor) { moisture_sensor_ = sensor; }
+  void set_temperature_sensor(sensor::Sensor *sensor) { temperature_sensor_ = sensor; }
+  void set_illuminance_sensor(sensor::Sensor *sensor) { illuminance_sensor_ = sensor; }
+
+  void set_new_address(uint8_t address) { new_address_ = address; }
+  void set_moisture_calibration(uint16_t min, uint16_t max, bool raw) {
+    moisture_min_ = min;
+    moisture_max_ = max;
+    moisture_raw_ = raw;
   }
-  void calib_light(float coeficient, int32_t constant, bool raw = false) {
-    calibration_.l_coeficient = coeficient;
-    calibration_.l_constant = constant;
-    calibration_.l_raw = raw;
+  void set_illuminance_calibration(float coefficient, int32_t constant, bool raw) {
+    illuminance_coefficient_ = coefficient;
+    illuminance_constant_ = constant;
+    illuminance_raw_ = raw;
   }
 
-  void update() override;
   void setup() override;
+  void update() override;
   void dump_config() override;
 
   float get_setup_priority() const override { return setup_priority::DATA; }
 
  protected:
-  struct Calibration {
-    uint16_t c_Min = 245;  // Capacity when dry.
-    uint16_t c_Max = 550;  // Capacity when wet.
-    bool c_raw = false;    // Use raw capacity values.
-
-    float l_coeficient = -1.525;  // Sensor specific coefficient.
-    int32_t l_constant = 100000;  // Direct sunlight.
-    bool l_raw = false;           // Use raw luminance values.
+  enum class ErrorCode : uint8_t {
+    NONE,
+    COMMUNICATION_FAILED,
+    UPDATE_INTERVAL_TOO_SHORT,
   };
 
-  struct Device {
-    bool started = false;
-    bool failure_logged = false;
-    uint8_t addr = 0;
-    uint8_t new_addr = 0;
-  };
-
-  // Internal method to read the moisture from the component after it has been scheduled.
+  bool apply_new_address_();
+  void finish_setup_();
   bool read_moisture_();
-  // Internal method to read the temperature from the component after it has been scheduled.
   bool read_temperature_();
-  // Internal method to read the light from the component after it has been scheduled.
-  bool read_light_();
-  // Internal method to initialize the light measurement with a 3 second read delay.
-  bool measure_light();
-  // Internal method to read the firmware version of the sensor.
-  uint8_t read_version_();
-  // Internal method to read the I2C address of the sensor.
-  uint8_t read_address_();
-  // Internal method to write the I2C address of the sensor.
-  bool write_address(uint8_t new_addr);
-  // Internal method to read the busy status from the sensor.
-  bool read_busy_();
-  // Internal method to reset the sensor.
-  bool write_reset_();
-  // Internal method to transition the sensor into a failed state and log it once.
-  void mark_failed_();
+  bool read_illuminance_();
+  bool start_light_measurement_();
+  bool sleep_();
 
-  sensor::Sensor *moisture_{nullptr};
-  sensor::Sensor *temperature_{nullptr};
-  sensor::Sensor *light_{nullptr};
+  sensor::Sensor *moisture_sensor_{nullptr};
+  sensor::Sensor *temperature_sensor_{nullptr};
+  sensor::Sensor *illuminance_sensor_{nullptr};
 
-  Calibration calibration_;
-  Device device_;
+  uint16_t moisture_min_{245};
+  uint16_t moisture_max_{550};
+  bool moisture_raw_{false};
+
+  float illuminance_coefficient_{-1.525f};
+  int32_t illuminance_constant_{100000};
+  bool illuminance_raw_{false};
+
+  uint8_t new_address_{0};
+  uint8_t firmware_version_{0};
+  ErrorCode error_code_{ErrorCode::NONE};
+  bool initialized_{false};
 };
 
 }  // namespace chirp
