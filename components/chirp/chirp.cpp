@@ -1,5 +1,6 @@
 #include "chirp.h"
 
+#include "esphome/core/hal.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 
@@ -25,6 +26,10 @@ static const uint32_t RESET_SETTLE_MS = 1000;
 static const uint32_t LIGHT_INTEGRATION_MS = 3000;
 // Sentinel value returned by the sensor for an unavailable reading.
 static const uint16_t INVALID_READING = 0xFFFF;
+// Delay between writing a register address (STOP) and reading the result (START).
+// The AVR firmware can't service a repeated-start read in time, so transactions
+// must be split with a brief wait — see Miceuz/i2c-moisture-sensor protocol notes.
+static const uint32_t REGISTER_READ_DELAY_MS = 20;
 
 void I2CSoilMoistureComponent::setup() {
   ESP_LOGCONFIG(TAG, "Setting up Chirp sensor...");
@@ -194,8 +199,22 @@ bool I2CSoilMoistureComponent::read_temperature_() {
 }
 
 bool I2CSoilMoistureComponent::read_illuminance_() {
+  // The light register is the one read whose timing the AVR firmware can't
+  // service via repeated-START; it must be a separate write+read with a
+  // brief gap, otherwise GET_LIGHT returns 0xFFFF. Copy the register into
+  // a RAM-backed local — some ESP I2C drivers can't DMA from .rodata
+  // (where file-scope `static const` lands).
+  uint8_t reg = REG_GET_LIGHT;
+  auto write_err = this->write(&reg, 1);
+  if (write_err != i2c::ERROR_OK) {
+    ESP_LOGW(TAG, "Light read: write(reg) failed, err=%d", write_err);
+    return false;
+  }
+  delay(REGISTER_READ_DELAY_MS);
   uint8_t buffer[2];
-  if (this->read_register(REG_GET_LIGHT, buffer, 2) != i2c::ERROR_OK) {
+  auto read_err = this->read(buffer, 2);
+  if (read_err != i2c::ERROR_OK) {
+    ESP_LOGW(TAG, "Light read: read(2) failed, err=%d", read_err);
     return false;
   }
 
